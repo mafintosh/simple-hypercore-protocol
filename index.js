@@ -125,8 +125,8 @@ module.exports = class SimpleProtocol {
     sodium.crypto_generichash_batch(out, [
       CAP_NS_BUF,
       this._split.tx.slice(0, 32),
-      this._split.rx.slice(0, 32)
-    ], key)
+      key
+    ], this._split.rx.slice(0, 32))
     return out
   }
 
@@ -136,8 +136,8 @@ module.exports = class SimpleProtocol {
     sodium.crypto_generichash_batch(out, [
       CAP_NS_BUF,
       this._split.rx.slice(0, 32),
-      this._split.tx.slice(0, 32)
-    ], key)
+      key
+    ], this._split.tx.slice(0, 32))
     return out
   }
 
