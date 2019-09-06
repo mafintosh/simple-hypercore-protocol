@@ -1,0 +1,161 @@
+const tape = require('tape')
+const SHP = require('./')
+
+const key = Buffer.alloc(32).fill('key')
+const discoveryKey = Buffer.alloc(32).fill('discovery')
+
+tape('single open', function (t) {
+  const a = new SHP(true, {
+    send (data) {
+      b.recv(data)
+    }
+  })
+
+  const b = new SHP(false, {
+    onopen (ch, message) {
+      t.same(ch, 0)
+      t.same(message.discoveryKey, discoveryKey)
+      t.notOk(message.key)
+      t.end()
+    },
+    send (data) {
+      a.recv(data)
+    }
+  })
+
+  a.open(0, { key, discoveryKey })
+})
+
+tape('single close', function (t) {
+  const a = new SHP(true, {
+    send (data) {
+      b.recv(data)
+    }
+  })
+
+  const b = new SHP(false, {
+    onclose (ch, message) {
+      t.same(ch, 0)
+      t.same(message.discoveryKey, discoveryKey)
+      t.end()
+    },
+    send (data) {
+      a.recv(data)
+    }
+  })
+
+  a.close(0, { discoveryKey })
+})
+
+tape('back and fourth', function (t) {
+  const a = new SHP(true, {
+    ondata (ch, message) {
+      t.same(ch, 0)
+      t.same(message, {
+        index: 42,
+        value: Buffer.from('data'),
+        nodes: [],
+        signature: null
+      })
+      a.close(ch)
+    },
+    send (data) {
+      process.nextTick(() => b.recv(data))
+    }
+  })
+
+  const b = new SHP(false, {
+    onopen (ch, message) {
+      t.same(ch, 0)
+      t.same(message.discoveryKey, discoveryKey)
+      t.notOk(message.key)
+    },
+    onrequest (ch, message) {
+      t.same(ch, 0)
+      t.same(message, { index: 42, bytes: 0, hash: false, nodes: 0 })
+      b.data(0, {
+        index: 42,
+        value: Buffer.from('data')
+      })
+    },
+    onclose (ch) {
+      t.same(ch, 0)
+      t.end()
+    },
+    send (data) {
+      process.nextTick(() => a.recv(data))
+    }
+  })
+
+  a.open(0, { key, discoveryKey })
+  a.request(0, {
+    index: 42
+  })
+})
+
+tape('various messages', function (t) {
+  t.plan(7)
+
+  const a = new SHP(true, {
+    send (data) {
+      process.nextTick(() => b.recv(data))
+    }
+  })
+
+  const b = new SHP(false, {
+    onhandshake () {
+      t.pass('handshook')
+    },
+    onextension (ch, id, data) {
+      t.same(ch, 0)
+      t.same(id, 42)
+      t.same(data, Buffer.from('binary!'))
+    },
+    onhave (ch, message) {
+      t.same(ch, 0)
+      t.same(message.start, 42)
+      t.same(message.length, 10)
+    },
+    send (data) {
+      process.nextTick(() => a.recv(data))
+    }
+  })
+
+  a.extension(0, 42, Buffer.from('binary!'))
+  a.have(0, { start: 42, length: 10 })
+})
+
+tape('auth', function (t) {
+  t.plan(4)
+
+  const a = new SHP(true, {
+    onauthenticate (remotePublicKey, done) {
+      t.pass('authenticated b')
+      if (remotePublicKey.equals(b.publicKey)) return done(null)
+      t.fail('bad public key')
+      done(new Error('Nope'))
+    },
+    onhandshake () {
+      t.pass('handshook b')
+    },
+    send (data) {
+      process.nextTick(() => b.recv(data))
+    }
+  })
+
+  const b = new SHP(false, {
+    onauthenticate (remotePublicKey, done) {
+      t.pass('authenticated a')
+      if (remotePublicKey.equals(a.publicKey)) return done(null)
+      t.fail('bad public key')
+      done(new Error('Nope'))
+    },
+    onhandshake () {
+      t.pass('handshook a')
+    },
+    send (data) {
+      process.nextTick(() => a.recv(data))
+    }
+  })
+
+})

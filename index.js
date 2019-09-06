@@ -2,34 +2,44 @@ const Handshake = require('./lib/handshake')
 const messages = require('./messages')
 const XOR = require('./lib/xor')
 const SMC = require('simple-message-channels')
+const SH = require('simple-handshake')
 const sodium = require('sodium-universal')
+const varint = require('varint')
 
-const CAP_NS_BUF = Buffer.from('capability')
+const CAP_NS_BUF = Buffer.from('hypercore capability')
 
 module.exports = class SimpleProtocol {
   constructor (initiator, options) {
+    const payload = { nonce: XOR.nonce() }
+    const handshake = new Handshake(initiator, messages.NoisePayload.encode(payload), options, this._onhandshake.bind(this))
+
     this.options = options || {}
     this.remotePayload = null
+    this.remotePublicKey = null
+    this.publicKey = handshake.keyPair.publicKey
     this.destroyed = false
 
-    this._payload = { nonce: XOR.nonce() }
+    this._payload = payload
     this._pending = []
-    this._handshake = new Handshake(initiator, messages.NoisePayload.encode(this._payload), options, this._onhandshake.bind(this))
+    this._handshake = handshake
     this._split = null
     this._encryption = null
 
     this._messages = new SMC({
+      onmessage,
+      context: this,
       types: [
         { context: this, onmessage: onopen, encoding: messages.Open },
-        { context: this, onmessage: onhandshake, encoding: messages.Handshake },
-        { context: this, onmessage: oninfo, encoding: messages.Info },
+        { context: this, onmessage: onoptions, encoding: messages.Options },
+        { context: this, onmessage: onstatus, encoding: messages.Status },
         { context: this, onmessage: onhave, encoding: messages.Have },
         { context: this, onmessage: onunhave, encoding: messages.Unhave },
         { context: this, onmessage: onwant, encoding: messages.Want },
         { context: this, onmessage: onunwant, encoding: messages.Unwant },
         { context: this, onmessage: onrequest, encoding: messages.Request },
         { context: this, onmessage: oncancel, encoding: messages.Cancel },
-        { context: this, onmessage: ondata, encoding: messages.Data }
+        { context: this, onmessage: ondata, encoding: messages.Data },
+        { context: this, onmessage: onclose, encoding: messages.Close }
       ]
     })
   }
@@ -38,11 +48,11 @@ module.exports = class SimpleProtocol {
     return this._send(ch, 0, message)
   }
 
-  handshake (ch, message) {
+  options (ch, message) {
     return this._send(ch, 1, message)
   }
 
-  info (ch, message) {
+  status (ch, message) {
     return this._send(ch, 2, message)
   }
 
@@ -74,9 +84,24 @@ module.exports = class SimpleProtocol {
     return this._send(ch, 9, message)
   }
 
-  _onhandshake (err, remotePayload, split, overflow) {
+  close (ch, message) {
+    return this._send(ch, 10, message || {})
+  }
+
+  extension (ch, id, message) {
+    const buf = Buffer.allocUnsafe(varint.encodingLength(id) + message.length)
+
+    varint.encode(id, buf, 0)
+    message.copy(buf, varint.encode.bytes)
+
+    return this._send(ch, 15, buf)
+  }
+
+  _onhandshake (err, remotePayload, split, overflow, remotePublicKey) {
     if (err) return this.destroy(err)
     if (!remotePayload) return this.destroy(new Error('Remote did not include a handshake payload'))
+
+    this.remotePublicKey = remotePublicKey
 
     try {
       remotePayload = messages.NoisePayload.decode(remotePayload)
@@ -88,6 +113,8 @@ module.exports = class SimpleProtocol {
     this._split = split
     this._encryption = new XOR({ rnonce: remotePayload.nonce, tnonce: this._payload.nonce }, split)
     this.remotePayload = remotePayload
+    if (this.options.onhandshake) this.options.onhandshake()
+    if (this.destroyed) return
 
     if (overflow) this.recv(overflow)
     while (this._pending.length && !this.destroyed) {
@@ -164,18 +191,22 @@ module.exports = class SimpleProtocol {
     if (this._encryption) this._encryption.final()
     if (this.options.destroy) this.options.destroy(err)
   }
+
+  static keyPair () {
+    return SH.keygen()
+  }
 }
 
 function onopen (ch, message, self) {
   if (self.options.onopen) self.options.onopen(ch, message)
 }
 
-function onhandshake (ch, message, self) {
-  if (self.options.onhandshake) self.options.onhandshake(ch, message)
+function onoptions (ch, message, self) {
+  if (self.options.onoptions) self.options.onoptions(ch, message)
 }
 
-function oninfo (ch, message, self) {
-  if (self.options.oninfo) self.options.oninfo(ch, message)
+function onstatus (ch, message, self) {
+  if (self.options.onstatus) self.options.onstatus(ch, message)
 }
 
 function onhave (ch, message, self) {
@@ -204,4 +235,15 @@ function oncancel (ch, message, self) {
 
 function ondata (ch, message, self) {
   if (self.options.ondata) self.options.ondata(ch, message)
+}
+
+function onclose (ch, message, self) {
+  if (self.options.onclose) self.options.onclose(ch, message)
+}
+
+function onmessage (ch, type, message, self) {
+  if (type !== 15) return
+  const id = varint.decode(message)
+  const m = message.slice(varint.decode.bytes)
+  if (self.options.onextension) self.options.onextension(ch, id, m)
 }

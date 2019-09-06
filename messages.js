@@ -24,14 +24,14 @@ var Open = exports.Open = {
   decode: null
 }
 
-var Handshake = exports.Handshake = {
+var Options = exports.Options = {
   buffer: true,
   encodingLength: null,
   encode: null,
   decode: null
 }
 
-var Info = exports.Info = {
+var Status = exports.Status = {
   buffer: true,
   encodingLength: null,
   encode: null,
@@ -87,10 +87,17 @@ var Data = exports.Data = {
   decode: null
 }
 
+var Close = exports.Close = {
+  buffer: true,
+  encodingLength: null,
+  encode: null,
+  decode: null
+}
+
 defineNoisePayload()
 defineOpen()
-defineHandshake()
-defineInfo()
+defineOptions()
+defineStatus()
 defineHave()
 defineUnhave()
 defineWant()
@@ -98,6 +105,7 @@ defineUnwant()
 defineRequest()
 defineCancel()
 defineData()
+defineClose()
 
 function defineNoisePayload () {
   var enc = [
@@ -233,35 +241,22 @@ function defineOpen () {
   }
 }
 
-function defineHandshake () {
+function defineOptions () {
   var enc = [
-    encodings.bytes,
-    encodings.bool,
-    encodings.string
+    encodings.string,
+    encodings.bool
   ]
 
-  Handshake.encodingLength = encodingLength
-  Handshake.encode = encode
-  Handshake.decode = decode
+  Options.encodingLength = encodingLength
+  Options.encode = encode
+  Options.decode = decode
 
   function encodingLength (obj) {
     var length = 0
-    if (defined(obj.id)) {
-      var len = enc[0].encodingLength(obj.id)
-      length += 1 + len
-    }
-    if (defined(obj.live)) {
-      var len = enc[1].encodingLength(obj.live)
-      length += 1 + len
-    }
-    if (defined(obj.userData)) {
-      var len = enc[0].encodingLength(obj.userData)
-      length += 1 + len
-    }
     if (defined(obj.extensions)) {
       for (var i = 0; i < obj.extensions.length; i++) {
         if (!defined(obj.extensions[i])) continue
-        var len = enc[2].encodingLength(obj.extensions[i])
+        var len = enc[0].encodingLength(obj.extensions[i])
         length += 1 + len
       }
     }
@@ -276,31 +271,16 @@ function defineHandshake () {
     if (!offset) offset = 0
     if (!buf) buf = Buffer.allocUnsafe(encodingLength(obj))
     var oldOffset = offset
-    if (defined(obj.id)) {
-      buf[offset++] = 10
-      enc[0].encode(obj.id, buf, offset)
-      offset += enc[0].encode.bytes
-    }
-    if (defined(obj.live)) {
-      buf[offset++] = 16
-      enc[1].encode(obj.live, buf, offset)
-      offset += enc[1].encode.bytes
-    }
-    if (defined(obj.userData)) {
-      buf[offset++] = 26
-      enc[0].encode(obj.userData, buf, offset)
-      offset += enc[0].encode.bytes
-    }
     if (defined(obj.extensions)) {
       for (var i = 0; i < obj.extensions.length; i++) {
         if (!defined(obj.extensions[i])) continue
-        buf[offset++] = 34
-        enc[2].encode(obj.extensions[i], buf, offset)
-        offset += enc[2].encode.bytes
+        buf[offset++] = 10
+        enc[0].encode(obj.extensions[i], buf, offset)
+        offset += enc[0].encode.bytes
       }
     }
     if (defined(obj.ack)) {
-      buf[offset++] = 40
+      buf[offset++] = 16
       enc[1].encode(obj.ack, buf, offset)
       offset += enc[1].encode.bytes
     }
@@ -314,9 +294,6 @@ function defineHandshake () {
     if (!(end <= buf.length && offset <= buf.length)) throw new Error("Decoded message is not valid")
     var oldOffset = offset
     var obj = {
-      id: null,
-      live: false,
-      userData: null,
       extensions: [],
       ack: false
     }
@@ -330,22 +307,10 @@ function defineHandshake () {
       var tag = prefix >> 3
       switch (tag) {
         case 1:
-        obj.id = enc[0].decode(buf, offset)
+        obj.extensions.push(enc[0].decode(buf, offset))
         offset += enc[0].decode.bytes
         break
         case 2:
-        obj.live = enc[1].decode(buf, offset)
-        offset += enc[1].decode.bytes
-        break
-        case 3:
-        obj.userData = enc[0].decode(buf, offset)
-        offset += enc[0].decode.bytes
-        break
-        case 4:
-        obj.extensions.push(enc[2].decode(buf, offset))
-        offset += enc[2].decode.bytes
-        break
-        case 5:
         obj.ack = enc[1].decode(buf, offset)
         offset += enc[1].decode.bytes
         break
@@ -356,14 +321,14 @@ function defineHandshake () {
   }
 }
 
-function defineInfo () {
+function defineStatus () {
   var enc = [
     encodings.bool
   ]
 
-  Info.encodingLength = encodingLength
-  Info.encode = encode
-  Info.decode = decode
+  Status.encodingLength = encodingLength
+  Status.encode = encode
+  Status.decode = decode
 
   function encodingLength (obj) {
     var length = 0
@@ -1152,6 +1117,65 @@ function defineData () {
         case 4:
         obj.signature = enc[1].decode(buf, offset)
         offset += enc[1].decode.bytes
+        break
+        default:
+        offset = skip(prefix & 7, buf, offset)
+      }
+    }
+  }
+}
+
+function defineClose () {
+  var enc = [
+    encodings.bytes
+  ]
+
+  Close.encodingLength = encodingLength
+  Close.encode = encode
+  Close.decode = decode
+
+  function encodingLength (obj) {
+    var length = 0
+    if (defined(obj.discoveryKey)) {
+      var len = enc[0].encodingLength(obj.discoveryKey)
+      length += 1 + len
+    }
+    return length
+  }
+
+  function encode (obj, buf, offset) {
+    if (!offset) offset = 0
+    if (!buf) buf = Buffer.allocUnsafe(encodingLength(obj))
+    var oldOffset = offset
+    if (defined(obj.discoveryKey)) {
+      buf[offset++] = 10
+      enc[0].encode(obj.discoveryKey, buf, offset)
+      offset += enc[0].encode.bytes
+    }
+    encode.bytes = offset - oldOffset
+    return buf
+  }
+
+  function decode (buf, offset, end) {
+    if (!offset) offset = 0
+    if (!end) end = buf.length
+    if (!(end <= buf.length && offset <= buf.length)) throw new Error("Decoded message is not valid")
+    var oldOffset = offset
+    var obj = {
+      discoveryKey: null
+    }
+    while (true) {
+      if (end <= offset) {
+        decode.bytes = offset - oldOffset
+        return obj
+      }
+      var prefix = varint.decode(buf, offset)
+      offset += varint.decode.bytes
+      var tag = prefix >> 3
+      switch (tag) {
+        case 1:
+        obj.discoveryKey = enc[0].decode(buf, offset)
+        offset += enc[0].decode.bytes
         break
         default:
         offset = skip(prefix & 7, buf, offset)

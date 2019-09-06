@@ -68,6 +68,22 @@ Create a local capability.
 
 Destroy the protocol state machine.
 
+#### `p.publicKey`
+
+The local public key used for authentication.
+
+#### `p.remotePublicKey`
+
+The remotes public key.
+
+#### `handlers.onauthenticate(remotePublicKey, done)`
+
+Called when you should authenticate a remote public key.
+
+#### `handlers.onhandshake()`
+
+Called when the initial protocol handshake has finished.
+
 #### `p.open(channel, message)`
 
 Send an open message on a channel.
@@ -76,17 +92,17 @@ Note that if you message.key the protocol, will turn that into a capability that
 
 Receiving an open message triggers `handlers.onopen(channel, message)`
 
-#### `p.handshake(channel, message)`
+#### `p.options(channel, message)`
 
-Send a handshake message on a channel.
+Send a options message on a channel.
 
-Receiving a handshake message triggers `handlers.onhandshake(channel, message)`
+Receiving a handshake message triggers `handlers.onoptions(channel, message)`
 
-#### `p.info(channel, message)`
+#### `p.status(channel, message)`
 
-Send a info message on a channel.
+Send a status message on a channel.
 
-Receiving a info message triggers `handlers.oninfo(channel, message)`
+Receiving a info message triggers `handlers.onstatus(channel, message)`
 
 #### `p.have(channel, message)`
 

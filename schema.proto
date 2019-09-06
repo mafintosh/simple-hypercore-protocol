@@ -1,6 +1,4 @@
-// Sent as part of the noise protocol
-// Not fully encrypted so don't put anything
-// sensitive here
+// Sent as part of the noise protocol.
 message NoisePayload {
   required bytes nonce = 1;
 }
@@ -11,19 +9,15 @@ message Open {
   optional bytes capability = 2;
 }
 
-// type=1, overall connection handshake. should be send just after the feed message on the first channel only
-message Handshake {
-  optional bytes id = 1;
-  optional bool live = 2; // keep the connection open forever? both ends have to agree
-  optional bytes userData = 3;
-  repeated string extensions = 4;
-  optional bool ack = 5; // Should all blocks be explicitly acknowledged?
+// type=1, overall feed options. can be sent multiple times
+message Options {
+  repeated string extensions = 1;
+  optional bool ack = 2; // Should all blocks be explicitly acknowledged?
 }
 
 // type=2, message indicating state changes etc.
 // initial state for uploading/downloading is true
-// if both ends are not downloading and not live it is safe to consider the stream ended
-message Info {
+message Status {
   optional bool uploading = 1;
   optional bool downloading = 2;
 }
@@ -83,3 +77,9 @@ message Data {
   optional bytes signature = 4;
 }
 
+// type=10, explicitly close a channel.
+message Close {
+  optional bytes discoveryKey = 1; // only send this if you did not do an open
+}
+
+// type=15, extension message
