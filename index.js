@@ -199,7 +199,7 @@ module.exports = class SimpleProtocol {
   destroy (err) {
     if (this.destroyed) return
     this.destroyed = true
-    if (this._encryption) this._encryption.final()
+    if (this._encryption) this._encryption.destroy()
     if (this.options.destroy) this.options.destroy(err)
   }
 
