@@ -157,5 +157,32 @@ tape('auth', function (t) {
       process.nextTick(() => a.recv(data))
     }
   })
+})
 
+tape('send ping', function (t) {
+  let pinging = false
+  let sent = 0
+
+  const a = new SHP(true, {
+    send (data) {
+      if (pinging) sent++
+      b.recv(data)
+    },
+    onhandshake () {
+      process.nextTick(function () {
+        pinging = true
+        for (let i = 0; i < 100; i++) a.ping()
+        t.same(sent, 100, 'sent a hundred pings')
+        t.end()
+      })
+    }
+  })
+
+  const b = new SHP(false, {
+    send (data) {
+      a.recv(data)
+    }
+  })
+
+  a.ping() // should not fail
 })

@@ -97,6 +97,17 @@ module.exports = class SimpleProtocol {
     return this._send(ch, 15, buf)
   }
 
+  ping () {
+    if (this._handshake || this._pending.length) return
+
+    let ping = Buffer.from([0])
+    if (this._encryption !== null) {
+      ping = this._encryption.encrypt(ping)
+    }
+
+    return this.options.send(ping)
+  }
+
   _onhandshake (err, remotePayload, split, overflow, remotePublicKey) {
     if (err) return this.destroy(err)
     if (!remotePayload) return this.destroy(new Error('Remote did not include a handshake payload'))
