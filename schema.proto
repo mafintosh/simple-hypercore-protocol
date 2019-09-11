@@ -11,7 +11,7 @@ message Open {
 
 // type=1, overall feed options. can be sent multiple times
 message Options {
-  repeated string extensions = 1;
+  repeated string extensions = 1; // Should be sorted lexicographically
   optional bool ack = 2; // Should all blocks be explicitly acknowledged?
 }
 
