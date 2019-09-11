@@ -51,6 +51,11 @@ Everytime a binary message should be sent to another peer,
 
 If there is a critical error, `handlers.destroy(err)` is called.
 
+After the initial handshake transport encryption is enabled,
+to ensure your stream is private.
+
+To disable transport encryption set `handlers.encrypted = false`.
+
 #### `p.recv(data)`
 
 Call this with incoming data.

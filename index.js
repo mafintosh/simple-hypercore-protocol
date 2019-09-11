@@ -122,7 +122,10 @@ module.exports = class SimpleProtocol {
 
     this._handshake = null
     this._split = split
-    this._encryption = new XOR({ rnonce: remotePayload.nonce, tnonce: this._payload.nonce }, split)
+    this._encryption = this.options.encrypted === false
+      ? null
+      : new XOR({ rnonce: remotePayload.nonce, tnonce: this._payload.nonce }, split)
+
     this.remotePayload = remotePayload
     if (this.options.onhandshake) this.options.onhandshake()
     if (this.destroyed) return
