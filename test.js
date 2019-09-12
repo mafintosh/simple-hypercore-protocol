@@ -94,7 +94,7 @@ tape('back and fourth', function (t) {
 })
 
 tape('various messages', function (t) {
-  t.plan(7)
+  t.plan(9)
 
   const a = new SHP(true, {
     send (data) {
@@ -116,12 +116,17 @@ tape('various messages', function (t) {
       t.same(message.start, 42)
       t.same(message.length, 10)
     },
+    onoptions (ch, message) {
+      t.same(ch, 0)
+      t.same(message.ack, true)
+    },
     send (data) {
       process.nextTick(() => a.recv(data))
     }
   })
 
   a.extension(0, 42, Buffer.from('binary!'))
+  a.options(0, { ack: true })
   a.have(0, { start: 42, length: 10 })
 })
 

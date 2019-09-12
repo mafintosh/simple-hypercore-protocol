@@ -9,11 +9,11 @@ const varint = require('varint')
 const CAP_NS_BUF = Buffer.from('hypercore capability')
 
 module.exports = class SimpleProtocol {
-  constructor (initiator, options) {
+  constructor (initiator, handlers) {
     const payload = { nonce: XOR.nonce() }
-    const handshake = new Handshake(initiator, messages.NoisePayload.encode(payload), options, this._onhandshake.bind(this))
+    const handshake = new Handshake(initiator, messages.NoisePayload.encode(payload), handlers, this._onhandshake.bind(this))
 
-    this.options = options || {}
+    this.handlers = handlers || {}
     this.remotePayload = null
     this.remotePublicKey = null
     this.publicKey = handshake.keyPair.publicKey
@@ -105,7 +105,7 @@ module.exports = class SimpleProtocol {
       ping = this._encryption.encrypt(ping)
     }
 
-    return this.options.send(ping)
+    return this.handlers.send(ping)
   }
 
   _onhandshake (err, remotePayload, split, overflow, remotePublicKey) {
@@ -122,12 +122,12 @@ module.exports = class SimpleProtocol {
 
     this._handshake = null
     this._split = split
-    this._encryption = this.options.encrypted === false
+    this._encryption = this.handlers.encrypted === false
       ? null
       : new XOR({ rnonce: remotePayload.nonce, tnonce: this._payload.nonce }, split)
 
     this.remotePayload = remotePayload
-    if (this.options.onhandshake) this.options.onhandshake()
+    if (this.handlers.onhandshake) this.handlers.onhandshake()
     if (this.destroyed) return
 
     if (overflow) this.recv(overflow)
@@ -157,7 +157,7 @@ module.exports = class SimpleProtocol {
       data = this._encryption.encrypt(data)
     }
 
-    return this.options.send(data)
+    return this.handlers.send(data)
   }
 
   capability (key) {
@@ -203,7 +203,7 @@ module.exports = class SimpleProtocol {
     if (this.destroyed) return
     this.destroyed = true
     if (this._encryption) this._encryption.destroy()
-    if (this.options.destroy) this.options.destroy(err)
+    if (this.handlers.destroy) this.handlers.destroy(err)
   }
 
   static keyPair () {
@@ -212,52 +212,52 @@ module.exports = class SimpleProtocol {
 }
 
 function onopen (ch, message, self) {
-  if (self.options.onopen) self.options.onopen(ch, message)
+  if (self.handlers.onopen) self.handlers.onopen(ch, message)
 }
 
 function onoptions (ch, message, self) {
-  if (self.options.onoptions) self.options.onoptions(ch, message)
+  if (self.handlers.onoptions) self.handlers.onoptions(ch, message)
 }
 
 function onstatus (ch, message, self) {
-  if (self.options.onstatus) self.options.onstatus(ch, message)
+  if (self.handlers.onstatus) self.handlers.onstatus(ch, message)
 }
 
 function onhave (ch, message, self) {
-  if (self.options.onhave) self.options.onhave(ch, message)
+  if (self.handlers.onhave) self.handlers.onhave(ch, message)
 }
 
 function onunhave (ch, message, self) {
-  if (self.options.onunhave) self.options.onunhave(ch, message)
+  if (self.handlers.onunhave) self.handlers.onunhave(ch, message)
 }
 
 function onwant (ch, message, self) {
-  if (self.options.onwant) self.options.onwant(ch, message)
+  if (self.handlers.onwant) self.handlers.onwant(ch, message)
 }
 
 function onunwant (ch, message, self) {
-  if (self.options.onunwant) self.options.onunwant(ch, message)
+  if (self.handlers.onunwant) self.handlers.onunwant(ch, message)
 }
 
 function onrequest (ch, message, self) {
-  if (self.options.onrequest) self.options.onrequest(ch, message)
+  if (self.handlers.onrequest) self.handlers.onrequest(ch, message)
 }
 
 function oncancel (ch, message, self) {
-  if (self.options.oncancel) self.options.oncancel(ch, message)
+  if (self.handlers.oncancel) self.handlers.oncancel(ch, message)
 }
 
 function ondata (ch, message, self) {
-  if (self.options.ondata) self.options.ondata(ch, message)
+  if (self.handlers.ondata) self.handlers.ondata(ch, message)
 }
 
 function onclose (ch, message, self) {
-  if (self.options.onclose) self.options.onclose(ch, message)
+  if (self.handlers.onclose) self.handlers.onclose(ch, message)
 }
 
 function onmessage (ch, type, message, self) {
   if (type !== 15) return
   const id = varint.decode(message)
   const m = message.slice(varint.decode.bytes)
-  if (self.options.onextension) self.options.onextension(ch, id, m)
+  if (self.handlers.onextension) self.handlers.onextension(ch, id, m)
 }
