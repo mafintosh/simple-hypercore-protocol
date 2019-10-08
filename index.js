@@ -10,7 +10,7 @@ const CAP_NS_BUF = Buffer.from('hypercore capability')
 
 module.exports = class SimpleProtocol {
   constructor (initiator, handlers) {
-    const payload = { nonce: XOR.nonce() }
+    const payload = { nonce: XOR.nonce(), userData: handlers.userData }
     const handshake = new Handshake(initiator, messages.NoisePayload.encode(payload), handlers, this._onhandshake.bind(this))
 
     this.handlers = handlers || {}
@@ -18,6 +18,9 @@ module.exports = class SimpleProtocol {
     this.remotePublicKey = null
     this.publicKey = handshake.keyPair.publicKey
     this.destroyed = false
+
+    this.remoteUserData = null
+    this.userData = handlers.userData || null
 
     this._payload = payload
     this._pending = []
@@ -127,6 +130,8 @@ module.exports = class SimpleProtocol {
       : new XOR({ rnonce: remotePayload.nonce, tnonce: this._payload.nonce }, split)
 
     this.remotePayload = remotePayload
+    this.remoteUserData = remotePayload.userData
+
     if (this.handlers.onhandshake) this.handlers.onhandshake()
     if (this.destroyed) return
 
