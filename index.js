@@ -32,6 +32,7 @@ module.exports = class SimpleProtocol {
 
     this._messages = new SMC({
       onmessage,
+      onmissing,
       context: this,
       types: [
         { context: this, onmessage: onopen, encoding: messages.Open },
@@ -297,4 +298,8 @@ function onmessage (ch, type, message, self) {
   const id = varint.decode(message)
   const m = message.slice(varint.decode.bytes)
   if (self.handlers.onextension) self.handlers.onextension(ch, id, m)
+}
+
+function onmissing (bytes, self) {
+  if (self.handlers.onmissing) self.handlers.onmissing(bytes)
 }
