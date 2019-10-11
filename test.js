@@ -203,3 +203,33 @@ tape('check handshake payload size', function (t) {
     })
   })
 })
+
+tape('set key pair later', function (t) {
+  let later = null
+
+  const a = new SHP(false, {
+    keyPair (done) {
+      setImmediate(function () {
+        later = SHP.keyPair()
+        done(null, later)
+      })
+    },
+    send (data) {
+      b.recv(data)
+    }
+  })
+
+  const b = new SHP(true, {
+    send (data) {
+      a.recv(data)
+    },
+    onauthenticate (remotePublicKey, done) {
+      t.same(remotePublicKey, later.publicKey)
+      t.same(a.publicKey, later.publicKey)
+      done()
+    },
+    onhandshake () {
+      t.end()
+    }
+  })
+})

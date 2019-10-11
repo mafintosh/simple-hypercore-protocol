@@ -11,22 +11,24 @@ const CAP_NS_BUF = Buffer.from('hypercore capability')
 module.exports = class SimpleProtocol {
   constructor (initiator, handlers) {
     const payload = { nonce: XOR.nonce(), userData: handlers.userData }
-    const handshake = new Handshake(initiator, messages.NoisePayload.encode(payload), handlers, this._onhandshake.bind(this))
 
     this.handlers = handlers || {}
     this.remotePayload = null
     this.remotePublicKey = null
-    this.publicKey = handshake.keyPair.publicKey
+    this.publicKey = null
     this.destroyed = false
 
     this.remoteUserData = null
     this.userData = handlers.userData || null
 
+    this._initiator = initiator
     this._payload = payload
     this._pending = []
-    this._handshake = handshake
+    this._handshake = null
+    this._handshaking = true
     this._split = null
     this._encryption = null
+    this._buffering = null
 
     this._messages = new SMC({
       onmessage,
@@ -45,6 +47,30 @@ module.exports = class SimpleProtocol {
         { context: this, onmessage: onclose, encoding: messages.Close }
       ]
     })
+
+    if (typeof this.handlers.keyPair !== 'function') {
+      this._onkeypair(null, this.handlers.keyPair || null)
+    } else {
+      this._buffering = []
+      this.handlers.keyPair(this._onkeypair.bind(this))
+    }
+  }
+
+  _onkeypair (err, keyPair) {
+    if (err) return this.destroy(err)
+    if (this._handshake !== null) return
+
+    this.handlers.keyPair = keyPair
+    const handshake = new Handshake(this._initiator, messages.NoisePayload.encode(this._payload), this.handlers, this._onhandshake.bind(this))
+
+    this.publicKey = handshake.keyPair.publicKey
+    this._handshake = handshake
+
+    if (this._buffering) {
+      while (this._buffering.length) this._recv(this._buffering.shift())
+    }
+
+    this._buffering = null
   }
 
   open (ch, message) {
@@ -101,7 +127,7 @@ module.exports = class SimpleProtocol {
   }
 
   ping () {
-    if (this._handshake || this._pending.length) return
+    if (this._handshaking || this._pending.length) return
 
     let ping = Buffer.from([0])
     if (this._encryption !== null) {
@@ -124,6 +150,7 @@ module.exports = class SimpleProtocol {
     }
 
     this._handshake = null
+    this._handshaking = false
     this._split = split
     this._encryption = this.handlers.encrypted === false
       ? null
@@ -142,7 +169,7 @@ module.exports = class SimpleProtocol {
   }
 
   _send (channel, type, message) {
-    if (this._handshake || this._pending.length) {
+    if (this._handshaking || this._pending.length) {
       this._pending.push([channel, type, message])
       return false
     }
@@ -188,9 +215,14 @@ module.exports = class SimpleProtocol {
   }
 
   recv (data) {
+    if (this._buffering !== null) this._buffering.push(data)
+    else this._recv(data)
+  }
+
+  _recv (data) {
     if (this.destroyed) return
 
-    if (this._handshake !== null) {
+    if (this._handshaking) {
       this._handshake.recv(data)
       return
     }
