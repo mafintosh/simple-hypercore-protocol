@@ -1,12 +1,6 @@
 // Sent as part of the noise protocol.
 message NoisePayload {
-  message UserData {
-    required string type = 1;
-    optional bytes value = 2;
-  }
-
   required bytes nonce = 1;
-  optional UserData userData = 2;
 }
 
 // type=0

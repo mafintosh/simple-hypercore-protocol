@@ -108,93 +108,8 @@ defineData()
 defineClose()
 
 function defineNoisePayload () {
-  var UserData = NoisePayload.UserData = {
-    buffer: true,
-    encodingLength: null,
-    encode: null,
-    decode: null
-  }
-
-  defineUserData()
-
-  function defineUserData () {
-    var enc = [
-      encodings.string,
-      encodings.bytes
-    ]
-
-    UserData.encodingLength = encodingLength
-    UserData.encode = encode
-    UserData.decode = decode
-
-    function encodingLength (obj) {
-      var length = 0
-      if (!defined(obj.type)) throw new Error("type is required")
-      var len = enc[0].encodingLength(obj.type)
-      length += 1 + len
-      if (defined(obj.value)) {
-        var len = enc[1].encodingLength(obj.value)
-        length += 1 + len
-      }
-      return length
-    }
-
-    function encode (obj, buf, offset) {
-      if (!offset) offset = 0
-      if (!buf) buf = Buffer.allocUnsafe(encodingLength(obj))
-      var oldOffset = offset
-      if (!defined(obj.type)) throw new Error("type is required")
-      buf[offset++] = 10
-      enc[0].encode(obj.type, buf, offset)
-      offset += enc[0].encode.bytes
-      if (defined(obj.value)) {
-        buf[offset++] = 18
-        enc[1].encode(obj.value, buf, offset)
-        offset += enc[1].encode.bytes
-      }
-      encode.bytes = offset - oldOffset
-      return buf
-    }
-
-    function decode (buf, offset, end) {
-      if (!offset) offset = 0
-      if (!end) end = buf.length
-      if (!(end <= buf.length && offset <= buf.length)) throw new Error("Decoded message is not valid")
-      var oldOffset = offset
-      var obj = {
-        type: "",
-        value: null
-      }
-      var found0 = false
-      while (true) {
-        if (end <= offset) {
-          if (!found0) throw new Error("Decoded message is not valid")
-          decode.bytes = offset - oldOffset
-          return obj
-        }
-        var prefix = varint.decode(buf, offset)
-        offset += varint.decode.bytes
-        var tag = prefix >> 3
-        switch (tag) {
-          case 1:
-          obj.type = enc[0].decode(buf, offset)
-          offset += enc[0].decode.bytes
-          found0 = true
-          break
-          case 2:
-          obj.value = enc[1].decode(buf, offset)
-          offset += enc[1].decode.bytes
-          break
-          default:
-          offset = skip(prefix & 7, buf, offset)
-        }
-      }
-    }
-  }
-
   var enc = [
-    encodings.bytes,
-    UserData
+    encodings.bytes
   ]
 
   NoisePayload.encodingLength = encodingLength
@@ -206,11 +121,6 @@ function defineNoisePayload () {
     if (!defined(obj.nonce)) throw new Error("nonce is required")
     var len = enc[0].encodingLength(obj.nonce)
     length += 1 + len
-    if (defined(obj.userData)) {
-      var len = enc[1].encodingLength(obj.userData)
-      length += varint.encodingLength(len)
-      length += 1 + len
-    }
     return length
   }
 
@@ -222,13 +132,6 @@ function defineNoisePayload () {
     buf[offset++] = 10
     enc[0].encode(obj.nonce, buf, offset)
     offset += enc[0].encode.bytes
-    if (defined(obj.userData)) {
-      buf[offset++] = 18
-      varint.encode(enc[1].encodingLength(obj.userData), buf, offset)
-      offset += varint.encode.bytes
-      enc[1].encode(obj.userData, buf, offset)
-      offset += enc[1].encode.bytes
-    }
     encode.bytes = offset - oldOffset
     return buf
   }
@@ -239,8 +142,7 @@ function defineNoisePayload () {
     if (!(end <= buf.length && offset <= buf.length)) throw new Error("Decoded message is not valid")
     var oldOffset = offset
     var obj = {
-      nonce: null,
-      userData: null
+      nonce: null
     }
     var found0 = false
     while (true) {
@@ -257,12 +159,6 @@ function defineNoisePayload () {
         obj.nonce = enc[0].decode(buf, offset)
         offset += enc[0].decode.bytes
         found0 = true
-        break
-        case 2:
-        var len = varint.decode(buf, offset)
-        offset += varint.decode.bytes
-        obj.userData = enc[1].decode(buf, offset, offset + len)
-        offset += enc[1].decode.bytes
         break
         default:
         offset = skip(prefix & 7, buf, offset)

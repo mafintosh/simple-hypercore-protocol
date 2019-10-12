@@ -192,18 +192,6 @@ tape('send ping', function (t) {
   a.ping() // should not fail
 })
 
-tape('check handshake payload size', function (t) {
-  t.plan(1)
-  t.throws(function () {
-    return new SHP(true, {
-      userData: {
-        type: 'biggie',
-        value: Buffer.alloc(32 * 1024)
-      }
-    })
-  })
-})
-
 tape('set key pair later', function (t) {
   let later = null
 
