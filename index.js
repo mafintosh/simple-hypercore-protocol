@@ -240,7 +240,8 @@ module.exports = class SimpleProtocol {
     if (this.handlers.destroy) this.handlers.destroy(err)
   }
 
-  static keyPair () {
+  static keyPair (seed) {
+    if (seed && Buffer.isBuffer(seed)) return SH.seedKeygen(seed)
     return SH.keygen()
   }
 }

@@ -151,6 +151,10 @@ Send a data message on a channel.
 
 Receiving a data message triggers `handlers.ondata(channel, message)`
 
+#### `keyPair = Protocol.keyPair([seed])`
+
+Static function to generate a Noise key pair, optionally from a seed.
+
 ## License
 
 MIT
