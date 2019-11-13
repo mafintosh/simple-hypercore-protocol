@@ -1,6 +1,6 @@
 {
   "name": "simple-hypercore-protocol",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "description": "Hypercore protocol state machine",
   "main": "index.js",
   "dependencies": {
