@@ -56,6 +56,8 @@ to ensure your stream is private.
 
 To disable transport encryption set `handlers.encrypted = false`.
 
+To disable both the NOISE handshake and the transport encryption, set `handlers.noise = false`.
+
 #### `p.recv(data)`
 
 Call this with incoming data.

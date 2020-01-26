@@ -22,7 +22,6 @@ module.exports = class SimpleProtocol {
     this._payload = payload
     this._pending = []
     this._handshake = null
-    this._handshaking = true
     this._split = null
     this._encryption = null
     this._buffering = null
@@ -46,11 +45,16 @@ module.exports = class SimpleProtocol {
       ]
     })
 
-    if (typeof this.handlers.keyPair !== 'function') {
-      this._onkeypair(null, this.handlers.keyPair || null)
+    if (this.handlers.noise !== false) {
+      this._handshaking = true
+      if (typeof this.handlers.keyPair !== 'function') {
+        this._onkeypair(null, this.handlers.keyPair || null)
+      } else {
+        this._buffering = []
+        this.handlers.keyPair(this._onkeypair.bind(this))
+      }
     } else {
-      this._buffering = []
-      this.handlers.keyPair(this._onkeypair.bind(this))
+      this._handshaking = false
     }
   }
 
