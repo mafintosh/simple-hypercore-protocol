@@ -225,6 +225,7 @@ tape('set key pair later', function (t) {
 tape('disable noise', function (t) {
   const a = new SHP(true, {
     noise: false,
+    encrypted: false,
     onhandshake () {
       t.fail('onhandshake may not be called with noise: false')
     },
@@ -235,6 +236,7 @@ tape('disable noise', function (t) {
 
   const b = new SHP(false, {
     noise: false,
+    encrypted: false,
     onhandshake () {
       t.fail('onhandshake may not be called with noise: false')
     },

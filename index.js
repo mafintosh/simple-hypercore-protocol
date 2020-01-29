@@ -24,6 +24,7 @@ module.exports = class SimpleProtocol {
     this._handshake = null
     this._split = null
     this._encryption = null
+    this._noise = !(handlers.encrypted === false && handlers.noise === false)
     this._buffering = null
 
     this._messages = new SMC({
@@ -45,7 +46,9 @@ module.exports = class SimpleProtocol {
       ]
     })
 
-    if (this.handlers.noise !== false) {
+    if (handlers.encrypted === false && handlers.noise === false) {
+      this._handshaking = false
+    } else {
       this._handshaking = true
       if (typeof this.handlers.keyPair !== 'function') {
         this._onkeypair(null, this.handlers.keyPair || null)
@@ -53,8 +56,6 @@ module.exports = class SimpleProtocol {
         this._buffering = []
         this.handlers.keyPair(this._onkeypair.bind(this))
       }
-    } else {
-      this._handshaking = false
     }
   }
 
