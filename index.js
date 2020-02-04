@@ -46,7 +46,7 @@ module.exports = class SimpleProtocol {
         { context: this, onmessage: onclose, encoding: messages.Close }
       ]
     })
-    
+
     if (handlers.encrypted !== false || handlers.noise !== false) {
       this._handshaking = true
       if (typeof this.handlers.keyPair !== 'function') {
