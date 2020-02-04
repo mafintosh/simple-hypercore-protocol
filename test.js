@@ -221,3 +221,35 @@ tape('set key pair later', function (t) {
     }
   })
 })
+
+tape('disable noise', function (t) {
+  const a = new SHP(true, {
+    noise: false,
+    encrypted: false,
+    onhandshake () {
+      t.fail('onhandshake may not be called with noise: false')
+    },
+    send (data) {
+      b.recv(data)
+    }
+  })
+
+  const b = new SHP(false, {
+    noise: false,
+    encrypted: false,
+    onhandshake () {
+      t.fail('onhandshake may not be called with noise: false')
+    },
+    onopen (ch, message) {
+      t.same(ch, 0)
+      t.same(message.discoveryKey, discoveryKey)
+      t.notOk(message.key)
+      t.end()
+    },
+    send (data) {
+      a.recv(data)
+    }
+  })
+
+  a.open(0, { key, discoveryKey })
+})

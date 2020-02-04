@@ -22,10 +22,11 @@ module.exports = class SimpleProtocol {
     this._payload = payload
     this._pending = []
     this._handshake = null
-    this._handshaking = true
     this._split = null
     this._encryption = null
+    this._noise = !(handlers.encrypted === false && handlers.noise === false)
     this._buffering = null
+    this._handshaking = false
 
     this._messages = new SMC({
       onmessage,
@@ -45,12 +46,15 @@ module.exports = class SimpleProtocol {
         { context: this, onmessage: onclose, encoding: messages.Close }
       ]
     })
-
-    if (typeof this.handlers.keyPair !== 'function') {
-      this._onkeypair(null, this.handlers.keyPair || null)
-    } else {
-      this._buffering = []
-      this.handlers.keyPair(this._onkeypair.bind(this))
+    
+    if (handlers.encrypted !== false || handlers.noise !== false) {
+      this._handshaking = true
+      if (typeof this.handlers.keyPair !== 'function') {
+        this._onkeypair(null, this.handlers.keyPair || null)
+      } else {
+        this._buffering = []
+        this.handlers.keyPair(this._onkeypair.bind(this))
+      }
     }
   }
 
