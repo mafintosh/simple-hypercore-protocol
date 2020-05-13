@@ -3,10 +3,8 @@ const messages = require('./messages')
 const XOR = require('./lib/xor')
 const SMC = require('simple-message-channels')
 const SH = require('simple-handshake')
-const sodium = require('sodium-universal')
+const crypto = require('hypercore-crypto')
 const varint = require('varint')
-
-const CAP_NS_BUF = Buffer.from('hypercore capability')
 
 module.exports = class SimpleProtocol {
   constructor (initiator, handlers) {
@@ -194,25 +192,11 @@ module.exports = class SimpleProtocol {
   }
 
   capability (key) {
-    if (!this._split) return null
-    const out = Buffer.allocUnsafe(32)
-    sodium.crypto_generichash_batch(out, [
-      CAP_NS_BUF,
-      this._split.tx.slice(0, 32),
-      key
-    ], this._split.rx.slice(0, 32))
-    return out
+    return crypto.capability(key, this._split)
   }
 
   remoteCapability (key) {
-    if (!this._split) return null
-    const out = Buffer.allocUnsafe(32)
-    sodium.crypto_generichash_batch(out, [
-      CAP_NS_BUF,
-      this._split.rx.slice(0, 32),
-      key
-    ], this._split.tx.slice(0, 32))
-    return out
+    return crypto.remoteCapability(key, this._split)
   }
 
   recv (data) {
