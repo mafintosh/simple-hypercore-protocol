@@ -4,7 +4,7 @@
   "description": "Hypercore protocol state machine",
   "main": "index.js",
   "dependencies": {
-    "hypercore-crypto": "^1.0.0",
+    "hypercore-crypto": "^2.0.0",
     "protocol-buffers-encodings": "^1.1.0",
     "simple-handshake": "^2.0.0",
     "simple-message-channels": "^1.2.1",
