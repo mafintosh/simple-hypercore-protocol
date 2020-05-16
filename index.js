@@ -2,7 +2,6 @@ const Handshake = require('./lib/handshake')
 const messages = require('./messages')
 const XOR = require('./lib/xor')
 const SMC = require('simple-message-channels')
-const SH = require('simple-handshake')
 const crypto = require('hypercore-crypto')
 const varint = require('varint')
 
@@ -224,13 +223,13 @@ module.exports = class SimpleProtocol {
   destroy (err) {
     if (this.destroyed) return
     this.destroyed = true
+    if (this._handshake) this._handshake.destroy()
     if (this._encryption) this._encryption.destroy()
     if (this.handlers.destroy) this.handlers.destroy(err)
   }
 
   static keyPair (seed) {
-    if (seed && Buffer.isBuffer(seed)) return SH.seedKeygen(seed)
-    return SH.keygen()
+    return Handshake.keyPair(seed)
   }
 }
 
