@@ -13,6 +13,7 @@ module.exports = class SimpleProtocol {
     this.remotePayload = null
     this.remotePublicKey = null
     this.publicKey = null
+    this.handshakeHash = null
     this.destroyed = false
 
     this._initiator = initiator
@@ -136,11 +137,12 @@ module.exports = class SimpleProtocol {
     return this.handlers.send(ping)
   }
 
-  _onhandshake (err, remotePayload, split, overflow, remotePublicKey) {
+  _onhandshake (err, remotePayload, split, overflow, remotePublicKey, handshakeHash) {
     if (err) return this.destroy(new Error('Noise handshake error')) // workaround for https://github.com/emilbayes/noise-protocol/issues/5
     if (!remotePayload) return this.destroy(new Error('Remote did not include a handshake payload'))
 
     this.remotePublicKey = remotePublicKey
+    this.handshakeHash = handshakeHash
 
     try {
       remotePayload = messages.NoisePayload.decode(remotePayload)
@@ -148,9 +150,6 @@ module.exports = class SimpleProtocol {
       return this.destroy(new Error('Could not parse remote payload'))
     }
 
-    if (this._handshake && this._handshake.noise) {
-      this.handshakeHash = this._handshake.noise.handshakeHash
-    }
     this._handshake = null
     this._handshaking = false
     this._split = split
