@@ -253,3 +253,33 @@ tape('disable noise', function (t) {
 
   a.open(0, { key, discoveryKey })
 })
+
+tape('handshakeHash', function (t) {
+  t.plan(3)
+
+  var pending = 3
+  const a = new SHP(true, {
+    onhandshake () {
+      if (--pending === 0) process.nextTick(check)
+    },
+    send (data) {
+      process.nextTick(() => b.recv(data))
+    }
+  })
+
+  const b = new SHP(false, {
+    onhandshake () {
+      if (--pending === 0) process.nextTick(check)
+    },
+    send (data) {
+      process.nextTick(() => a.recv(data))
+    }
+  })
+
+  if (--pending === 0) check()
+  function check () {
+    t.ok(a.handshakeHash)
+    t.ok(b.handshakeHash)
+    t.deepEqual(a.handshakeHash, b.handshakeHash)
+  }
+})

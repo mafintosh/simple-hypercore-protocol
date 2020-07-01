@@ -83,6 +83,12 @@ The local public key used for authentication.
 
 The remotes public key.
 
+#### `p.handshakeHash`
+
+The noise handshake hash which uniquely identifies the noise session.
+
+http://noiseprotocol.org/noise.html#channel-binding
+
 #### `handlers.onauthenticate(remotePublicKey, done)`
 
 Called when you should authenticate a remote public key.

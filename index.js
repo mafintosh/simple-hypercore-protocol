@@ -148,6 +148,9 @@ module.exports = class SimpleProtocol {
       return this.destroy(new Error('Could not parse remote payload'))
     }
 
+    if (this._handshake && this._handshake.noise) {
+      this.handshakeHash = this._handshake.noise.handshakeHash
+    }
     this._handshake = null
     this._handshaking = false
     this._split = split
