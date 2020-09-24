@@ -5,9 +5,9 @@
   "main": "index.js",
   "dependencies": {
     "hypercore-crypto": "^2.1.0",
-    "noise-protocol": "^2.0.0",
+    "noise-protocol": "^3.0.1",
     "protocol-buffers-encodings": "^1.1.0",
-    "simple-handshake": "^2.0.0",
+    "simple-handshake": "^3.0.0",
     "simple-message-channels": "^1.2.1",
     "varint": "^5.0.0",
     "xsalsa20-universal": "^1.0.0"
