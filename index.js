@@ -138,7 +138,7 @@ module.exports = class SimpleProtocol {
   }
 
   _onhandshake (err, remotePayload, split, overflow, remotePublicKey, handshakeHash) {
-    if (err) return this.destroy(new Error('Noise handshake error')) // workaround for https://github.com/emilbayes/noise-protocol/issues/5
+    if (err) return this.destroy(new Error('Noise handshake error: ' + err.message)) // workaround for https://github.com/emilbayes/noise-protocol/issues/5
     if (!remotePayload) return this.destroy(new Error('Remote did not include a handshake payload'))
 
     this.remotePublicKey = remotePublicKey
